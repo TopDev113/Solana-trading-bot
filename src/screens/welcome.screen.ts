@@ -8,22 +8,34 @@ import { TokenService } from "../services/token.metadata";
 import { contractInfoScreenHandler } from "./contract.info.screen";
 
 const MAX_RETRIES = 5;
-export const welcomeKeyboardList = [
-  // [{ text: '🏦 Buy/Sell', command: 'buysell' }],
-  // snipe_token, my_position
-  [
-    { text: "🎯 Sniper [Soon]", command: "dummy_button" },
-    { text: "📊 Positions", command: "position" },
-  ], // position
-  // [{ text: '♻️ Withdraw', command: 'transfer_funds' }],
-  [{ text: "Burn: Off ♨️", command: `burn_switch` }],
-  [
-    { text: "⛓ Bridge", command: "bridge" },
-    { text: "🛠 Settings & Tools", command: "settings" },
-  ],
-  [{ text: "🎁 Referral Program", command: "referral" }],
-  [{ text: "❌ Close", command: "dismiss_message" }],
-];
+export const welcomeKeyboardList = (auto_buy: boolean) => {
+  return {
+    inline_keyboard: [
+      [
+        {
+          text: "⛓ Status",
+          callback_data: JSON.stringify({ command: "status" }),
+        },
+        {
+          text: "🛠 Settings & Tools",
+          callback_data: JSON.stringify({ command: "settings" }),
+        },
+      ],
+      [
+        {
+          text: `${!auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`,
+          callback_data: JSON.stringify({ command: "autobuy_switch" }),
+        },
+      ],
+      [
+        {
+          text: "❌ Close",
+          callback_data: JSON.stringify({ command: "dismiss_message" }),
+        },
+      ],
+    ],
+  };
+};
 
 export const WelcomeScreenHandler = async (
   bot: TelegramBot,
@@ -31,6 +43,7 @@ export const WelcomeScreenHandler = async (
 ) => {
   try {
     const { username, id: chat_id, first_name, last_name } = msg.chat;
+    console.log("username*************", username);
     // check if bot
     if (!username) {
       bot.sendMessage(
@@ -132,67 +145,12 @@ export const welcomeGuideHandler = async (
   if (!user) return;
   const solbalance = await TokenService.getSOLBalance(user.wallet_address);
   const caption =
-    `<b>Welcome to GrowTrade | Beta Version</b>\n\n` +
-    `The Unique Solana Trading Bot. Snipe, trade and keep track of your positions with GrowTrade.\n\n` +
-    `⬩ A never seen unique Burn Mechanism 🔥\n` +
-    `⬩ Revenue Share through Buybacks on GrowSol ($GRW)\n\n` +
+    `<b>Welcome to CryptoTrade | Beta Version</b>\n\n` +
+    `The Unique Solana Trading Bot. Track and trade with CryptoTrade.\n\n` +
     `<b>💳 My Wallet:</b>\n${copytoclipboard(user.wallet_address)}\n\n` +
-    `<b>💳 Balance:</b> ${solbalance} SOL\n\n` +
-    `<a href="https://solscan.io/address/${user.wallet_address}">View on Explorer</a>\n\n` +
-    `<b>Part of <a href="https://growsol.io">GrowSol</a>'s Ecosystem</b>\n\n` +
-    // `-----------------------\n` +
-    // `<a href="https://docs.growsol.io/docs">📖 Docs</a>\n` +
-    // `<a href="https://growsol.io">🌍 Website</a>\n\n` +
-    `<b>Paste a contract address to trigger the Buy/Sell Menu or pick an option to get started.</b>`;
+    `<b>💳 Balance:</b> ${solbalance} SOL\n\n`;
 
-  // const textEventHandler = async (msg: TelegramBot.Message) => {
-  //   const receivedChatId = msg.chat.id;
-  //   const receivedText = msg.text;
-  //   const receivedMessageId = msg.message_id;
-  //   const receivedTextSender = msg.chat.username;
-  //   // Check if the received message ID matches the original message ID
-  //   if (receivedText && receivedChatId === chat_id) {
-  //     // message should be same user
-  //     if (receivedTextSender === username) {
-  //       await contractInfoScreenHandler(bot, msg, receivedText, 'switch_sell');
-  //     }
-  //     setTimeout(() => { bot.deleteMessage(receivedChatId, receivedMessageId) }, 2000)
-  //   }
-  //   console.log("Removed");
-  //   bot.removeListener('text', textEventHandler);
-  // }
-
-  // // Add the 'text' event listener
-  // bot.on('text', textEventHandler);
-
-  const burn_fee = user.burn_fee;
-  const reply_markup = {
-    inline_keyboard: welcomeKeyboardList.map((rowItem) =>
-      rowItem.map((item) => {
-        if (item.command.includes("bridge")) {
-          return {
-            text: item.text,
-            url: "https://t.me/growbridge_bot",
-          };
-        }
-        if (item.text.includes("Burn")) {
-          const burnText = `${burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"}`;
-          return {
-            text: burnText,
-            callback_data: JSON.stringify({
-              command: item.command,
-            }),
-          };
-        }
-        return {
-          text: item.text,
-          callback_data: JSON.stringify({
-            command: item.command,
-          }),
-        };
-      })
-    ),
-  };
+  const { auto_buy } = user;
 
   if (replaceId) {
     bot.editMessageText(caption, {
@@ -200,13 +158,13 @@ export const welcomeGuideHandler = async (
       chat_id,
       parse_mode: "HTML",
       disable_web_page_preview: true,
-      reply_markup,
+      reply_markup: welcomeKeyboardList(auto_buy),
     });
   } else {
     await bot.sendMessage(chat_id, caption, {
       parse_mode: "HTML",
       disable_web_page_preview: true,
-      reply_markup,
+      reply_markup: welcomeKeyboardList(auto_buy),
     });
   }
 };

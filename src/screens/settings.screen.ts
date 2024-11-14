@@ -24,7 +24,7 @@ import {
   JitoFeeEnum,
   UserTradeSettingService,
 } from "../services/user.trade.setting.service";
-import { welcomeKeyboardList } from "./welcome.screen";
+
 import { GenerateReferralCode } from "./referral.link.handler";
 import { TokenService } from "../services/token.metadata";
 import { PNLService } from "../services/pnl.service";
@@ -34,6 +34,7 @@ import { JupiterService } from "../services/jupiter.service";
 import { NATIVE_MINT } from "@solana/spl-token";
 import { calcAmountOut } from "../raydium/raydium.service";
 import { getCoinData } from "../pump/api";
+import { welcomeGuideHandler } from "./welcome.screen";
 
 export const settingScreenHandler = async (
   bot: TelegramBot,
@@ -104,6 +105,62 @@ export const settingScreenHandler = async (
   }
 };
 
+export const setParameterHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message
+) => {
+  const username = msg.chat.username;
+  if (!username) return;
+  const chat_id = msg.chat.id;
+  const slippageSetting = await UserTradeSettingService.getSlippage(username);
+  const reply_markup = msg.reply_markup;
+  const gasSetting = await UserTradeSettingService.getGas(username);
+  const gasvalue = UserTradeSettingService.getGasValue(gasSetting);
+  const { slippage } = slippageSetting;
+  const user = await UserService.findOne({ username });
+  if (!user) return;
+  const { wallet_address, auto_buy, auto_buy_amount } = user;
+  if (!chat_id || !reply_markup) return;
+  bot.sendMessage(chat_id, `Set Parameter of Trading Bot....`);
+  let inline_keyboard = reply_markup.inline_keyboard;
+  inline_keyboard[6] = [
+    {
+      text: `〰️ Slippage: ${slippage} %`,
+      callback_data: JSON.stringify({
+        command: `set_slippage`,
+      }),
+    },
+    {
+      text: `${auto_buy_amount} SOL`,
+      callback_data: JSON.stringify({
+        command: `autobuy_amount`,
+      }),
+    },
+    {
+      text: `⚙️ ${gasvalue} SOL`,
+      callback_data: JSON.stringify({
+        command: "custom_gas",
+      }),
+    },
+  ];
+  await bot.editMessageReplyMarkup(
+    {
+      inline_keyboard,
+    },
+    {
+      message_id: msg.message_id,
+      chat_id,
+    }
+  );
+};
+export const connectCopyingWalletHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message
+) => {};
+export const connectMyWalletHandler = async (
+  bot: TelegramBot,
+  msg: TelegramBot.Message
+) => {};
 export const presetBuyBtnHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message
@@ -730,78 +787,6 @@ export const setCustomAutoBuyAmountHandler = async (
   }
 };
 
-export const switchBurnOptsHandler = async (
-  bot: TelegramBot,
-  msg: TelegramBot.Message
-) => {
-  try {
-    const message_id = msg.message_id;
-    const sentMessage = await bot.sendMessage(msg.chat.id, "Updating...");
-
-    const username = msg.chat.username;
-    if (!username) {
-      await bot.deleteMessage(msg.chat.id, message_id);
-      await sendUsernameRequiredNotification(bot, msg);
-      return;
-    }
-
-    const user = await UserService.findOne({ username });
-    if (!user) {
-      await sendUsernameRequiredNotification(bot, msg);
-      await bot.deleteMessage(msg.chat.id, sentMessage.message_id);
-      return;
-    }
-
-    await UserService.updateMany({ username }, { burn_fee: !user.burn_fee });
-    // console.log("🚀 ~ switchBurnOptsHandler ~ user.burn_fee:", user.burn_fee)
-
-    if (!user.burn_fee) {
-      const caption =
-        `Burn: On 🔥\n\n` +
-        `GrowTrade's burn functionality operates seamlessly through its fee system, where a portion of tokens bought and sold is systematically burned. This process does not affect users' own tokens but only those acquired through the fee mechanism, ensuring the safety of your trades.`;
-      bot.sendMessage(msg.chat.id, caption, closeReplyMarkup);
-    }
-    const reply_markup = {
-      inline_keyboard: welcomeKeyboardList.map((rowItem) =>
-        rowItem.map((item) => {
-          if (item.command.includes("bridge")) {
-            return {
-              text: item.text,
-              url: "https://t.me/growbridge_bot",
-            };
-          }
-          if (item.text.includes("Burn")) {
-            const burnText = `${
-              !user.burn_fee ? "Burn: On 🔥" : "Burn: Off ♨️"
-            }`;
-            return {
-              text: burnText,
-              callback_data: JSON.stringify({
-                command: item.command,
-              }),
-            };
-          }
-          return {
-            text: item.text,
-            callback_data: JSON.stringify({
-              command: item.command,
-            }),
-          };
-        })
-      ),
-    };
-
-    await bot.editMessageReplyMarkup(reply_markup, {
-      message_id,
-      chat_id: msg.chat.id,
-    });
-
-    await bot.deleteMessage(msg.chat.id, sentMessage.message_id);
-  } catch (error) {
-    console.log("🚀 ~ switchBurnOptsHandler ~ error:", error);
-  }
-};
-
 export const switchAutoBuyOptsHandler = async (
   bot: TelegramBot,
   msg: TelegramBot.Message
@@ -827,17 +812,11 @@ export const switchAutoBuyOptsHandler = async (
     const isAutoBuy = !user.auto_buy;
     await UserService.updateMany({ username }, { auto_buy: isAutoBuy });
 
-    const reply_markup = await getReplyOptionsForSettings(
-      username,
-      isAutoBuy,
-      user.auto_buy_amount
-    );
-
-    await bot.editMessageReplyMarkup(reply_markup, {
-      message_id,
-      chat_id: msg.chat.id,
-    });
-
+    const caption =
+      `<b>Welcome to CryptoTrade | Beta Version</b>\n\n` +
+      `The Unique Solana Trading Bot. Track and trade with CryptoTrade.\n\n` +
+      `<b>💳 My Wallet:</b>\n${copytoclipboard(user.wallet_address)}\n\n`;
+    await welcomeGuideHandler(bot, msg, message_id);
     await bot.deleteMessage(msg.chat.id, sentMessage.message_id);
   } catch (error) {
     console.log("🚀 ~ switchAutoBuyOptsHandler ~ error:", error);
@@ -864,40 +843,6 @@ export const getReplyOptionsForSettings = async (
     inline_keyboard: [
       [
         {
-          text: `💳 Wallet`,
-          callback_data: JSON.stringify({
-            command: `wallet_view`,
-          }),
-        },
-        {
-          text: `🗒  Preset Settings`,
-          callback_data: JSON.stringify({
-            command: `preset_setting`,
-          }),
-        },
-      ],
-      [
-        {
-          text: "♻️ Withdraw",
-          callback_data: JSON.stringify({
-            command: `transfer_funds`,
-          }),
-        },
-        {
-          text: `〰️ Slippage: ${slippage} %`,
-          callback_data: JSON.stringify({
-            command: `set_slippage`,
-          }),
-        },
-      ],
-      [
-        {
-          text: `${!auto_buy ? "Autobuy ☑️" : "Autobuy ✅"}`,
-          callback_data: JSON.stringify({
-            command: `autobuy_switch`,
-          }),
-        },
-        {
           text: `${auto_buy_amount} SOL`,
           callback_data: JSON.stringify({
             command: `autobuy_amount`,
@@ -906,49 +851,13 @@ export const getReplyOptionsForSettings = async (
       ],
       [
         {
-          text: "--- MEV PROTECT ---",
+          text: `〰️ Slippage: ${slippage} %`,
           callback_data: JSON.stringify({
-            command: `dump`,
+            command: `set_slippage`,
           }),
         },
       ],
       [
-        {
-          text: `🔁 ${jitoFeeSetting.jitoOption}`,
-          callback_data: JSON.stringify({
-            command: `switch_mev`,
-          }),
-        },
-        {
-          text: `⚙️ ${jitoFeeValue} SOL`,
-          callback_data: JSON.stringify({
-            command: `custom_jitofee`,
-          }),
-        },
-      ],
-      [
-        {
-          text: "--- PRIORITY FEES ---",
-          callback_data: JSON.stringify({
-            command: `dump`,
-          }),
-        },
-      ],
-      [
-        {
-          text: `🔁 ${
-            gasSetting.gas === GasFeeEnum.HIGH
-              ? "high"
-              : gasSetting.gas === GasFeeEnum.MEDIUM
-              ? "medium"
-              : gasSetting.gas === GasFeeEnum.LOW
-              ? "low"
-              : "custom"
-          }`,
-          callback_data: JSON.stringify({
-            command: "switch_gas",
-          }),
-        },
         {
           text: `⚙️ ${gasvalue} SOL`,
           callback_data: JSON.stringify({
@@ -963,6 +872,8 @@ export const getReplyOptionsForSettings = async (
             command: "back_home",
           }),
         },
+      ],
+      [
         {
           text: "❌ Close",
           callback_data: JSON.stringify({

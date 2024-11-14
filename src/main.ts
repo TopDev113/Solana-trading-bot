@@ -72,22 +72,6 @@ const startTradeBot = () => {
     bot.deleteMessage(msg.chat.id, msg.message_id);
 
     await WelcomeScreenHandler(bot, msg);
-    const referralcode = UserService.extractUniqueCode(msg.text ?? "");
-    if (referralcode && referralcode !== "") {
-      // store info
-      const chat = msg.chat;
-      if (chat.username) {
-        const data = await UserService.findLastOne({ username: chat.username });
-        if (data && data.referral_code && data.referral_code !== "") return;
-        await UserService.updateMany(
-          { username: chat.username },
-          {
-            referral_code: referralcode,
-            referral_date: new Date(),
-          }
-        );
-      }
-    }
   });
   bot.onText(/\/position/, async (msg: TelegramBot.Message) => {
     await positionScreenHandler(bot, msg);

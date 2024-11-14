@@ -1,9 +1,7 @@
 import TelegramBot, { InlineKeyboardMarkup } from "node-telegram-bot-api";
 import { JupiterService, QuoteRes } from "../services/jupiter.service";
 import { TokenService } from "../services/token.metadata";
-import {
-  closeReplyMarkup,
-} from "./common.screen";
+import { closeReplyMarkup } from "./common.screen";
 import { UserService } from "../services/user.service";
 import {
   BUY_XSOL_TEXT,
@@ -25,9 +23,7 @@ import {
   createBurnInstruction,
   getAssociatedTokenAddressSync,
 } from "@solana/spl-token";
-import {
-  UserTradeSettingService,
-} from "../services/user.trade.setting.service";
+import { UserTradeSettingService } from "../services/user.trade.setting.service";
 import { MsgLogService } from "../services/msglog.service";
 import { copytoclipboard, fromWeiToValue } from "../utils";
 import bs58 from "bs58";

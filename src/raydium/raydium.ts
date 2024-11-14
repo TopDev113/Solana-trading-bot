@@ -164,8 +164,8 @@ export async function checkMintable(
     if (!data) {
       return;
     }
-    const deserialize = MintLayout.decode(data);
-    return deserialize.mintAuthorityOption === 0;
+    // const deserialize = MintLayout.decode(data);
+    // return deserialize.mintAuthorityOption === 0;
   } catch (e) {
     console.debug(e);
     console.error({ mint: vault }, `Failed to check if mint is renounced`);
@@ -265,11 +265,14 @@ export const runListener = async () => {
       });
 
       //@ts-ignore
-      const accounts = tx?.transaction.message.instructions.find((ix) => ix.programId.toString() === instructionName)?.accounts as PublicKey[];
-      if (!accounts) {
-        console.log("No accounts found in the transaction.");
-        return;
-      }
+      // const accounts = tx?.transaction.message.instructions.find(
+      //   (ix) => ix.programId.toString() === instructionName
+      // )?.accounts as PublicKey[];
+      // if (!accounts) {
+      //   console.log("No accounts found in the transaction.");
+      //   return;
+      // }
+      const accounts = PublicKey[2]; //fake code
       const poolIdIndex = isAmm ? 4 : 5;
       const tokenAIndex = isAmm ? 8 : 21;
       const tokenBIndex = isAmm ? 9 : 20;

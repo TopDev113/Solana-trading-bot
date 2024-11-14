@@ -70,3 +70,8 @@ PNL_IMG_GENERATOR_API=
 ```sh
 npm run serve
 ```
+
+## How to use Telegram Bot
+
+type: t.me/copy_detect_wallet_bot
+HTTP API: 7739010191:AAG7P3mK6kY7laeWm_Bp3ZkkwZCJhGMo79U
